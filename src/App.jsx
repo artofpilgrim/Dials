@@ -418,7 +418,11 @@ export default function App() {
                 <Seg
                   options={[{ value: 'horizontal', label: 'Horiz.' }, { value: 'vertical', label: 'Vert.' }]}
                   value={p.orientation}
-                  onChange={(v) => set('orientation', v)}
+                  onChange={(v) => {
+                    if (v === p.orientation) return;
+                    // Swap canvas dimensions so the dial fits the new orientation
+                    setMany({ orientation: v, width: p.height, height: p.width });
+                  }}
                 />
               </div>
               <div className="row" style={{ marginTop: 8 }}>
