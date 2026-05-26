@@ -238,17 +238,16 @@ function NumField({ label, value, step = 1, onChange }) {
   );
 }
 
-function TextField({ label, value, onChange, placeholder = '' }) {
+function TextField({ label, value, onChange, placeholder = '', wide = false }) {
   return (
-    <div className="field">
+    <div className={'field' + (wide ? ' field-wide' : '')}>
       <label>{label}</label>
       <input
-        className="num mono"
+        className="num text mono"
         type="text"
         value={value}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        style={{ textAlign: 'left' }}
       />
     </div>
   );
@@ -624,7 +623,7 @@ export default function App() {
           />
 
           {shape === 'straight' && (
-            <div style={{ marginTop: 12 }}>
+            <div className="gap-top-lg">
               <div className="row">
                 <label>Orientation</label>
                 <Seg
@@ -637,7 +636,7 @@ export default function App() {
                   }}
                 />
               </div>
-              <div className="row" style={{ marginTop: 8 }}>
+              <div className="row gap-top">
                 <label>Tick side</label>
                 <Seg
                   options={[
@@ -653,7 +652,7 @@ export default function App() {
           )}
 
           {shape === 'arc' && (
-            <div style={{ marginTop: 12 }}>
+            <div className="gap-top-lg">
               <Slider
                 label="Start angle" suffix="°"
                 value={p.startAngle} min={-180} max={360} step={1}
@@ -668,7 +667,7 @@ export default function App() {
           )}
 
           {isArc && (
-            <div style={{ marginTop: 4 }}>
+            <div className="gap-top-sm">
               <div className="row">
                 <label>Ticks</label>
                 <Seg
@@ -694,7 +693,7 @@ export default function App() {
             </div>
           )}
 
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row gap-top">
             <label>Reverse direction</label>
             <Toggle checked={p.reverse} onChange={(v) => set('reverse', v)} />
           </div>
@@ -720,7 +719,7 @@ export default function App() {
               onChange={(v) => set('subdivisions', Math.max(0, Math.round(Number(v) || 0)))}
             />
           </div>
-          <p className="hint" style={{ marginTop: -2 }}>Subdivisions = minor ticks between adjacent majors. 0 hides them.</p>
+          <p className="hint">Subdivisions = minor ticks between adjacent majors. 0 hides them.</p>
           <Slider label="Major length" value={p.majorLen} min={2} max={60} step={1} onChange={(v) => set('majorLen', v)} suffix="px" />
           <Slider label="Minor length" value={p.minorLen} min={1} max={40} step={1} onChange={(v) => set('minorLen', v)} suffix="px" />
           <Slider label="Major weight" value={p.majorWeight} min={0.5} max={8} step={0.5} onChange={(v) => set('majorWeight', v)} suffix="px" />
@@ -747,19 +746,11 @@ export default function App() {
               <Slider label="Size" value={p.numberSize} min={6} max={48} step={1} onChange={(v) => set('numberSize', v)} suffix="px" />
               <Slider label="Offset" value={p.numberOffset} min={0} max={40} step={1} onChange={(v) => set('numberOffset', v)} suffix="px" />
               <Slider label="Weight" value={p.numberWeight} min={100} max={900} step={100} onChange={(v) => set('numberWeight', v)} />
-              <div className="grid-2" style={{ marginTop: 8 }}>
+              <div className="grid-2 gap-top">
                 <TextField label="Suffix" value={p.numberSuffix} placeholder="° % mph" onChange={(v) => set('numberSuffix', v)} />
               </div>
-              <div className="field" style={{ marginTop: 8 }}>
-                <label>Custom labels</label>
-                <input
-                  className="num mono"
-                  type="text"
-                  value={p.customLabels}
-                  placeholder="e.g. L, M, H"
-                  style={{ width: '100%', textAlign: 'left' }}
-                  onChange={(e) => set('customLabels', e.target.value)}
-                />
+              <div className="gap-top">
+                <TextField label="Custom labels" value={p.customLabels} placeholder="e.g. L, M, H" wide onChange={(v) => set('customLabels', v)} />
               </div>
               <p className="hint">Comma-separated, one per major tick. Leave an entry blank to keep the numeric value at that position.</p>
             </>
@@ -776,16 +767,8 @@ export default function App() {
               <Slider label="Hub size" value={p.centerDotSize} min={1} max={80} step={1} onChange={(v) => set('centerDotSize', v)} suffix="px" />
             )}
 
-            <div className="field" style={{ marginTop: 10 }}>
-              <label>Title text</label>
-              <input
-                className="num mono"
-                type="text"
-                value={p.centerText}
-                placeholder="e.g. RPM × 1000"
-                style={{ width: '100%', textAlign: 'left' }}
-                onChange={(e) => set('centerText', e.target.value)}
-              />
+            <div className="gap-top">
+              <TextField label="Title text" value={p.centerText} placeholder="e.g. RPM × 1000" wide onChange={(v) => set('centerText', v)} />
             </div>
             {p.centerText && (
               <>
@@ -803,7 +786,7 @@ export default function App() {
             <NumField label="Width"  value={p.width}  onChange={(v) => set('width',  Math.max(80, Number(v) || 80))} />
             <NumField label="Height" value={p.height} onChange={(v) => set('height', Math.max(80, Number(v) || 80))} />
           </div>
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row gap-top">
             <label>Texture size</label>
             <Seg
               options={[
@@ -815,7 +798,7 @@ export default function App() {
               onChange={(n) => setMany({ width: n, height: n })}
             />
           </div>
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row gap-top">
             <label>Background</label>
             <Seg
               options={[
@@ -826,7 +809,7 @@ export default function App() {
               onChange={(v) => set('bg', v)}
             />
           </div>
-          <div className="row" style={{ marginTop: 10 }}>
+          <div className="row gap-top">
             <label>Invert (white on black)</label>
             <Toggle checked={p.invert} onChange={(v) => set('invert', v)} />
           </div>
@@ -853,13 +836,13 @@ export default function App() {
             <button className="btn" onClick={exportSVG}>Download SVG</button>
             <button className="btn alt" onClick={exportPNG}>Download PNG</button>
           </div>
-          <div className="btn-row" style={{ marginTop: 8 }}>
-            <button className="btn alt" onClick={copySVG} style={{ gridColumn: '1 / -1' }}>
+          <div className="btn-row gap-top-sm">
+            <button className="btn alt full-row" onClick={copySVG}>
               {copyStatus === 'ok' ? 'Copied!' : copyStatus === 'error' ? 'Copy failed' : 'Copy SVG to clipboard'}
             </button>
           </div>
-          <div className="btn-row" style={{ marginTop: 8 }}>
-            <button className="btn alt" onClick={reset} style={{ gridColumn: '1 / -1' }}>Reset to defaults</button>
+          <div className="btn-row gap-top-sm">
+            <button className="btn alt full-row" onClick={reset}>Reset to defaults</button>
           </div>
           <p className="hint">PNG exports at 2× the canvas resolution. SVG is scalable and editable in any vector tool.</p>
         </div>
