@@ -18,6 +18,7 @@ const DEFAULTS = {
   majorWeight: 2,
   minorWeight: 1,
   tickCornerRadius: 0,      // 0 = square corners, 100 = fully rounded pill
+  tickRoundBoth: false,     // when true, round the rim-side end too (pill)
   showNumbers: true,
   numberSize: 18,
   numberOffset: 8,
@@ -248,7 +249,7 @@ function sanitizeParams(p) {
   // Booleans: accept strict true/false only. !!val would turn truthy-looking
   // strings like "false", "0", or "no" into true, so a hand-crafted preset
   // could silently flip toggles. Fall back to DEFAULTS on anything else.
-  for (const key of ['rim', 'showNumbers', 'invert', 'reverse', 'centerDot', 'outlineOnExport']) {
+  for (const key of ['rim', 'showNumbers', 'invert', 'reverse', 'centerDot', 'outlineOnExport', 'tickRoundBoth']) {
     if (out[key] !== true && out[key] !== false) out[key] = DEFAULTS[key];
   }
 
@@ -528,6 +529,7 @@ const HASH_KEYS = {
   majorWeight: 'mw',
   minorWeight: 'nw',
   tickCornerRadius: 'tcr',
+  tickRoundBoth: 'trb',
   showNumbers: 'sn',
   numberSize: 'ns',
   numberOffset: 'no',
@@ -1042,6 +1044,12 @@ export default function App() {
           <Slider label="Major weight" value={p.majorWeight} min={0.5} max={8} step={0.5} onChange={(v) => set('majorWeight', v)} suffix="px" />
           <Slider label="Minor weight" value={p.minorWeight} min={0.25} max={5} step={0.25} onChange={(v) => set('minorWeight', v)} suffix="px" />
           <Slider label="Corner radius" value={p.tickCornerRadius} min={0} max={100} step={1} onChange={(v) => set('tickCornerRadius', v)} suffix="%" />
+          {p.tickCornerRadius > 0 && (
+            <div className="row gap-top">
+              <label>Round both ends</label>
+              <Toggle checked={p.tickRoundBoth} onChange={(v) => set('tickRoundBoth', v)} />
+            </div>
+          )}
         </Sec>
 
         <Sec id="rim" title="Rim">

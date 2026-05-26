@@ -133,6 +133,7 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
     orientation,
     reverse,
     tickCornerRadius,
+    tickRoundBoth,
     fontFamily,
   } = p;
 
@@ -187,11 +188,14 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
       const off = perp(rimExt + len, s);
       const back = perp(rimExt, -s);
       // p1 (back-extension end) sits at the rim — keep its short edge flat
-      // so the tick meets the rim line cleanly even with a thin rim.
+      // so the tick meets the rim line cleanly even with a thin rim. The
+      // user can opt into pill-style ticks with `tickRoundBoth`.
       return renderTick({
         x1: a.x + back.dx, y1: a.y + back.dy,
         x2: a.x + off.dx, y2: a.y + off.dy,
-        weight, color: tickColor, cornerPct: tickCornerRadius, flatSide: 'p1', keyId: `${key}-${s}`,
+        weight, color: tickColor, cornerPct: tickCornerRadius,
+        flatSide: tickRoundBoth ? 'none' : 'p1',
+        keyId: `${key}-${s}`,
       });
     });
   };
@@ -343,6 +347,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     centerText, centerTextSize, centerTextWeight, centerTextOffset,
     centerDot, centerDotSize,
     tickCornerRadius,
+    tickRoundBoth,
     fontFamily,
   } = p;
 
@@ -373,8 +378,10 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     // For inward ticks p2 sits at the rim (inner tip = p1, away from rim).
     // For outward ticks p1 sits at the rim (outer tip = p2, away from rim).
     // The rim-side end gets the flat short edge so a thin rim doesn't show
-    // a gap between the tick and the rim line.
-    const flatSide = tickDirection === 'inward' ? 'p2' : 'p1';
+    // a gap. `tickRoundBoth` overrides to pill-style.
+    const flatSide = tickRoundBoth
+      ? 'none'
+      : (tickDirection === 'inward' ? 'p2' : 'p1');
     return renderTick({
       x1: p1.x, y1: p1.y,
       x2: p2.x, y2: p2.y,
