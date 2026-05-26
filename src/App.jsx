@@ -56,8 +56,21 @@ function clean(p) {
     out.tickColor = '#ffffff';
     out.bg = p.bg === 'transparent' ? 'transparent' : '#000000';
   }
+
+  // Coerce numeric fields and guarantee a non-empty range. The NumField draft
+  // pattern already prevents '' from entering state, but old presets and
+  // future paths could still produce equal or inverted min/max.
+  const minN = Number(out.min);
+  const maxN = Number(out.max);
+  out.min = Number.isFinite(minN) ? minN : 0;
+  out.max = Number.isFinite(maxN) ? maxN : 100;
+  if (out.max <= out.min) {
+    const fallback = Math.max(1, Math.abs(Number(out.majorStep) || 1));
+    out.max = out.min + fallback;
+  }
+
   // Derive the minor step from subdivisions count (minor ticks between adjacent majors)
-  out.minorStep = p.subdivisions > 0 ? p.majorStep / (p.subdivisions + 1) : 0;
+  out.minorStep = p.subdivisions > 0 ? out.majorStep / (p.subdivisions + 1) : 0;
   return out;
 }
 
@@ -88,24 +101,47 @@ function Slider({ label, value, min, max, step, onChange, suffix = '' }) {
 }
 
 function NumField({ label, value, step = 1, onChange }) {
+  // Keep a local string draft so intermediate states ("", "-", "3.") don't
+  // leak into parent state and get fed into renderer arithmetic. We only
+  // commit when the draft parses to a finite number, and revert on blur if
+  // it doesn't.
+  const [draft, setDraft] = useState(String(value));
+  const lastSentRef = useRef(value);
+  useEffect(() => {
+    // Resync only when the value changed from outside (preset load, reset).
+    if (value !== lastSentRef.current) {
+      lastSentRef.current = value;
+      setDraft(String(value));
+    }
+  }, [value]);
+
+  const handleChange = (e) => {
+    const s = e.target.value;
+    setDraft(s);
+    if (s === '' || s === '-' || s.endsWith('.')) return; // mid-typing
+    const n = Number(s);
+    if (Number.isFinite(n)) {
+      lastSentRef.current = n;
+      onChange(n);
+    }
+  };
+  const handleBlur = () => {
+    const n = Number(draft);
+    if (!Number.isFinite(n) || draft.trim() === '') {
+      setDraft(String(value)); // revert
+    }
+  };
+
   return (
     <div className="field">
       <label>{label}</label>
       <input
         className="num mono"
         type="number"
-        value={value}
+        value={draft}
         step={step}
-        onChange={(e) => {
-          const v = e.target.value;
-          if (v === '' || v === '-') { onChange(v); return; }
-          const n = Number(v);
-          if (!Number.isNaN(n)) onChange(n);
-        }}
-        onBlur={(e) => {
-          const n = Number(e.target.value);
-          if (Number.isNaN(n)) onChange(0);
-        }}
+        onChange={handleChange}
+        onBlur={handleBlur}
       />
     </div>
   );

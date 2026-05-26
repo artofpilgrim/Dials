@@ -22,18 +22,26 @@ function tickLabelFor(p) {
   };
 }
 
+// Hard ceiling on tick count so a misconfigured range/step can't freeze the
+// browser. Picked well above any realistic dial; pathological values bail.
+const MAX_TICKS = 5000;
+
 export function buildTickValues(min, max, step) {
   const ticks = [];
-  if (step <= 0) return ticks;
-  // small epsilon to avoid floating-point drift losing the final tick
+  if (!Number.isFinite(min) || !Number.isFinite(max) || !Number.isFinite(step)) return ticks;
+  if (step <= 0 || max <= min) return ticks;
+  const expected = (max - min) / step;
+  if (expected > MAX_TICKS) return ticks;
+
+  // Loop on the integer index, not by accumulating step into v, so FP drift
+  // doesn't compound and we round relative to min (not against zero).
+  const span = max - min;
   const eps = step / 1e6;
-  for (let v = min; v <= max + eps; v += step) {
-    // clamp tiny FP drift back onto step lattice
-    const rounded = Math.round(v / step) * step;
-    ticks.push(rounded);
+  const count = Math.floor(span / step + eps);
+  for (let i = 0; i <= count; i++) {
+    ticks.push(min + i * step);
   }
-  // dedup last item in case rounding pushed it past max
-  return ticks.filter((v, i, a) => i === 0 || Math.abs(v - a[i - 1]) > eps);
+  return ticks;
 }
 
 // ---- Straight dial ----
@@ -332,13 +340,23 @@ export default function Dial({ params }) {
   const p = params;
   const { min, max, majorStep, minorStep } = p;
 
+  // In full-circle mode the min and max values map to the same screen angle,
+  // so a tick at `max` overlaps the tick at `min`. Drop it for both bands.
+  const isFullCircle = p.shape !== 'straight'
+    && Math.abs(p.sweepAngle) >= 360 - 0.001;
+  const dropMax = (arr, step) => {
+    if (!isFullCircle || arr.length === 0) return arr;
+    const eps = step / 1e3;
+    return Math.abs(arr[arr.length - 1] - max) < eps ? arr.slice(0, -1) : arr;
+  };
+
   const ticksMajor = React.useMemo(
-    () => buildTickValues(min, max, majorStep),
-    [min, max, majorStep],
+    () => dropMax(buildTickValues(min, max, majorStep), majorStep),
+    [min, max, majorStep, isFullCircle],
   );
   const ticksMinorAll = React.useMemo(
-    () => buildTickValues(min, max, minorStep),
-    [min, max, minorStep],
+    () => dropMax(buildTickValues(min, max, minorStep), minorStep),
+    [min, max, minorStep, isFullCircle],
   );
   const ticksMinor = React.useMemo(() => {
     const eps = Math.min(majorStep, minorStep) / 1e3;
