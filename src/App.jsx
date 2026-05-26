@@ -77,12 +77,14 @@ function clean(p) {
   return out;
 }
 
-// Clamp every numeric field to the same bounds the UI handlers enforce so
-// values arriving from a URL hash, a preset, or older state can't push the
-// renderer (or export canvas) into pathological ranges. Non-finite values
-// fall back to DEFAULTS, then get clamped. Strings/booleans pass through.
+// Clamp every numeric, enum, boolean, and string field to the same bounds
+// the UI controls enforce, so values arriving from a URL hash or preset
+// can't produce states the controls cannot represent. Non-finite numbers
+// and unrecognised enums fall back to DEFAULTS.
 function sanitizeParams(p) {
   const out = { ...p };
+
+  // Numeric clamps mirror the UI sliders / number fields.
   const clampN = (key, lo, hi, integer = false) => {
     let n = Number(out[key]);
     if (!Number.isFinite(n)) n = DEFAULTS[key];
@@ -112,6 +114,40 @@ function sanitizeParams(p) {
   clampN('centerDotSize', 1, 80);
   clampN('startAngle', -180, 360);
   clampN('sweepAngle', 30, 360);
+
+  // Enum allowlists — must match the options offered by the matching <Seg>.
+  const oneOf = (key, allowed) => {
+    if (!allowed.includes(out[key])) out[key] = DEFAULTS[key];
+  };
+  oneOf('shape', ['straight', 'semi', 'arc', 'circle']);
+  oneOf('tickDirection', ['inward', 'outward']);
+  oneOf('numberPlacement', ['inside', 'outside']);
+  oneOf('orientation', ['horizontal', 'vertical']);
+  oneOf('tickSide', ['below', 'above', 'both']);
+  oneOf('bg', ['#ffffff', 'transparent']);
+
+  // tickColor isn't user-editable in the UI today but is part of the schema;
+  // tolerate any 6-digit hex, fall back to default for anything else.
+  if (typeof out.tickColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(out.tickColor)) {
+    out.tickColor = DEFAULTS.tickColor;
+  }
+
+  // Booleans: the hash decoder already converts '1'/'0' → true/false, but a
+  // hand-crafted preset could carry any value. Coerce defensively.
+  for (const key of ['rim', 'showNumbers', 'invert', 'reverse', 'centerDot']) {
+    out[key] = !!out[key];
+  }
+
+  // Free-form strings: enforce type and a soft length cap so a giant URL
+  // can't drag the renderer into a stall.
+  const truncStr = (key, max) => {
+    const v = typeof out[key] === 'string' ? out[key] : DEFAULTS[key];
+    out[key] = v.length > max ? v.slice(0, max) : v;
+  };
+  truncStr('numberSuffix', 32);
+  truncStr('customLabels', 1024);
+  truncStr('centerText', 256);
+
   return out;
 }
 
