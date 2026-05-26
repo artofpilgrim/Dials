@@ -56,10 +56,11 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
     reverse,
   } = p;
 
-  // Layout pad reserves space for the label, not the tick — so tick length is
-  // purely cosmetic and changing it doesn't shrink the axis. Mirrors how minor
-  // tick length already works.
-  const pad = Math.max(16, (showNumbers ? numberOffset + numberSize : 0) + 4);
+  // Layout pad is a small fixed margin so the axis stays put no matter what
+  // tick/number sizes the user picks — they're all cosmetic. Labels that
+  // would otherwise overflow the canvas just clip (same contract as minor
+  // ticks, and now matches the behaviour the user expects across the board).
+  const pad = 16;
   const labelFor = tickLabelFor(p);
 
   const isV = orientation === 'vertical';
@@ -150,23 +151,20 @@ function ArcDial({ p, ticksMajor, ticksMinor }) {
   const {
     width, height,
     rim, rimThickness,
-    majorLen,
-    showNumbers, numberSize, numberOffset,
     startAngle,
     sweepAngle,
-    tickDirection,
-    numberPlacement,
   } = p;
 
   const cx = width / 2;
   const isFullCircle = Math.abs(sweepAngle) >= 360 - 0.001;
   const cy = height / 2;
 
-  // Compute usable radius given padding for ticks + numbers
+  // Outer margin reserves only the rim's half-thickness plus a small slack,
+  // so changing tick length or number size doesn't shrink the rim. Whatever
+  // extends past the rim (outward ticks, outside labels) just clips if the
+  // canvas is too small — same contract as the straight dial.
   const ringExtra = rim ? rimThickness / 2 : 0;
-  const outerExtra = (tickDirection === 'outward' ? majorLen : 0)
-    + (showNumbers && numberPlacement === 'outside' ? numberOffset + numberSize + 4 : 0)
-    + ringExtra + 2;
+  const outerExtra = ringExtra + 2;
 
   let r = Math.min(width, height) / 2 - outerExtra;
   r = Math.max(20, r);
