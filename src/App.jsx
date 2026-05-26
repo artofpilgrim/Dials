@@ -32,6 +32,7 @@ const DEFAULTS = {
   centerDotSize: 8,
   tickColor: '#111111',
   bg: '#ffffff',
+  pngScale: 2,              // PNG export resolution multiplier
   // arc-specific
   startAngle: 180,
   sweepAngle: 180,
@@ -116,6 +117,7 @@ function sanitizeParams(p) {
   clampN('centerDotSize', 1, 80);
   clampN('startAngle', -180, 360);
   clampN('sweepAngle', 30, 360);
+  clampN('pngScale', 1, 4, true);
 
   // Enum allowlists — must match the options offered by the matching <Seg>.
   const oneOf = (key, allowed) => {
@@ -431,6 +433,7 @@ const HASH_KEYS = {
   centerDotSize: 'cds',
   tickColor: 'tc',
   bg: 'bg',
+  pngScale: 'ps',
   startAngle: 'sa',
   sweepAngle: 'sw',
   tickDirection: 'td',
@@ -690,6 +693,20 @@ export default function App() {
     setMany({ ...preset, shape: s });
   };
 
+  // ---- Share ----
+  const [linkStatus, setLinkStatus] = useState('idle'); // idle | ok | error
+  const linkResetRef = useRef(null);
+  const copyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkStatus('ok');
+    } catch {
+      setLinkStatus('error');
+    }
+    if (linkResetRef.current) clearTimeout(linkResetRef.current);
+    linkResetRef.current = setTimeout(() => setLinkStatus('idle'), 1500);
+  }, []);
+
   // ---- Export ----
   const [copyStatus, setCopyStatus] = useState('idle'); // idle | ok | error
   const copyResetRef = useRef(null);
@@ -741,7 +758,7 @@ export default function App() {
     const svg64 = btoa(unescape(encodeURIComponent('<?xml version="1.0" encoding="UTF-8"?>\n' + xml)));
     const img = new Image();
     img.onload = () => {
-      const scale = 2;
+      const scale = params.pngScale || 2;
       const cnv = document.createElement('canvas');
       cnv.width = params.width * scale;
       cnv.height = params.height * scale;
@@ -756,7 +773,7 @@ export default function App() {
       cnv.toBlob((b) => {
         const url = URL.createObjectURL(b);
         const a = document.createElement('a');
-        a.href = url; a.download = `dial-${params.shape}@2x.png`;
+        a.href = url; a.download = `dial-${params.shape}@${scale}x.png`;
         document.body.appendChild(a); a.click(); a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }, 'image/png');
@@ -998,7 +1015,20 @@ export default function App() {
         </Sec>
 
         <div className="foot">
-          <div className="btn-row">
+          <div className="row">
+            <label>PNG scale</label>
+            <Seg
+              options={[
+                { value: 1, label: '1×' },
+                { value: 2, label: '2×' },
+                { value: 3, label: '3×' },
+                { value: 4, label: '4×' },
+              ]}
+              value={p.pngScale}
+              onChange={(v) => set('pngScale', v)}
+            />
+          </div>
+          <div className="btn-row gap-top">
             <button className="btn" onClick={exportSVG}>Download SVG</button>
             <button className="btn alt" onClick={exportPNG}>Download PNG</button>
           </div>
@@ -1008,9 +1038,14 @@ export default function App() {
             </button>
           </div>
           <div className="btn-row gap-top-sm">
+            <button className="btn alt full-row" onClick={copyLink}>
+              {linkStatus === 'ok' ? 'Link copied!' : linkStatus === 'error' ? 'Copy failed' : 'Copy share link'}
+            </button>
+          </div>
+          <div className="btn-row gap-top-sm">
             <button className="btn alt full-row" onClick={reset}>Reset to defaults</button>
           </div>
-          <p className="hint">PNG exports at 2× the canvas resolution. SVG is scalable and editable in any vector tool.</p>
+          <p className="hint">SVG is scalable and editable in any vector tool. The share link round-trips the full dial config in the URL hash.</p>
         </div>
       </aside>
 
