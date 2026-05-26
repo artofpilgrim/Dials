@@ -56,7 +56,7 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
     reverse,
   } = p;
 
-  const pad = Math.max(36, majorLen + numberOffset + numberSize + 12);
+  const pad = Math.max(16, majorLen + (showNumbers ? numberOffset + numberSize : 0) + 4);
   const labelFor = tickLabelFor(p);
 
   const isV = orientation === 'vertical';
@@ -163,7 +163,7 @@ function ArcDial({ p, ticksMajor, ticksMinor }) {
   const ringExtra = rim ? rimThickness / 2 : 0;
   const outerExtra = (tickDirection === 'outward' ? majorLen : 0)
     + (showNumbers && numberPlacement === 'outside' ? numberOffset + numberSize + 4 : 0)
-    + ringExtra + 8;
+    + ringExtra + 2;
 
   let r = Math.min(width, height) / 2 - outerExtra;
   r = Math.max(20, r);
@@ -185,8 +185,8 @@ function ArcDial({ p, ticksMajor, ticksMinor }) {
     const maxY = Math.max(...ys) + outerExtra;
     const bbW = maxX - minX;
     const bbH = maxY - minY;
-    const sx = (width - 8) / bbW;
-    const sy = (height - 8) / bbH;
+    const sx = (width - 2) / bbW;
+    const sy = (height - 2) / bbH;
     const scale = Math.min(1, Math.min(sx, sy));
     if (scale < 1) {
       r = r * scale;
