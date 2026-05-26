@@ -225,7 +225,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     tickDirection,
     numberPlacement,
     reverse,
-    centerText, centerTextSize,
+    centerText, centerTextSize, centerTextWeight,
   } = p;
 
   const labelFor = tickLabelFor(p);
@@ -316,7 +316,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
           x={cx} y={cy}
           fontFamily="Helvetica, Arial, sans-serif"
           fontSize={centerTextSize}
-          fontWeight={500}
+          fontWeight={centerTextWeight}
           fill={tickColor}
           textAnchor="middle"
           dominantBaseline="middle"

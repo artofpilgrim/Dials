@@ -25,6 +25,7 @@ const DEFAULTS = {
   customLabels: '',
   centerText: '',
   centerTextSize: 28,
+  centerTextWeight: 500,
   tickColor: '#111111',
   bg: '#ffffff',
   // arc-specific
@@ -563,7 +564,10 @@ export default function App() {
               />
             </div>
             {p.centerText && (
-              <Slider label="Size" value={p.centerTextSize} min={8} max={96} step={1} onChange={(v) => set('centerTextSize', v)} suffix="px" />
+              <>
+                <Slider label="Size" value={p.centerTextSize} min={8} max={96} step={1} onChange={(v) => set('centerTextSize', v)} suffix="px" />
+                <Slider label="Weight" value={p.centerTextWeight} min={100} max={900} step={100} onChange={(v) => set('centerTextWeight', v)} />
+              </>
             )}
             <p className="hint">Rendered at the dial's pivot. For a semi-circle this sits at the bottom of the arc; for a full circle, the geometric centre.</p>
           </Sec>
