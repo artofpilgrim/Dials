@@ -87,11 +87,63 @@ function Sec({ title, children }) {
 }
 
 function Slider({ label, value, min, max, step, onChange, suffix = '' }) {
+  // Local draft for the number input so intermediate strings ("", "-", "3.")
+  // don't poison parent state. The slider half always commits a valid number,
+  // so we only need to guard the typed-input half.
+  const [draft, setDraft] = useState(String(value));
+  const lastSentRef = useRef(value);
+  useEffect(() => {
+    if (value !== lastSentRef.current) {
+      lastSentRef.current = value;
+      setDraft(String(value));
+    }
+  }, [value]);
+
+  const clamp = (n) => Math.min(max, Math.max(min, n));
+
+  const handleTextChange = (e) => {
+    const s = e.target.value;
+    setDraft(s);
+    if (s === '' || s === '-' || s.endsWith('.')) return;
+    const n = Number(s);
+    if (!Number.isFinite(n)) return;
+    const c = clamp(n);
+    if (c === value) return;
+    lastSentRef.current = c;
+    onChange(c);
+  };
+  const handleTextBlur = () => {
+    const trimmed = draft.trim();
+    const n = Number(trimmed);
+    if (trimmed === '' || !Number.isFinite(n)) {
+      setDraft(String(value));
+      return;
+    }
+    const c = clamp(n);
+    setDraft(String(c));
+    if (c !== value) {
+      lastSentRef.current = c;
+      onChange(c);
+    }
+  };
+
   return (
     <div className="slider-row">
       <div className="slider-head">
         <label>{label}</label>
-        <span className="val mono">{value}{suffix}</span>
+        <div className="val-input">
+          <input
+            className="mono"
+            type="number"
+            value={draft}
+            min={min}
+            max={max}
+            step={step}
+            onChange={handleTextChange}
+            onBlur={handleTextBlur}
+          />
+          {suffix && <span className="val-suffix mono">{suffix}</span>}
+        </div>
       </div>
       <input
         type="range"
