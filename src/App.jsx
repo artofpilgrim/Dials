@@ -259,6 +259,31 @@ export default function App() {
   const zoomRef = useRef(1);
   const dragRef = useRef(null);
 
+  // ---- Fit the canvas to the available stage area ----
+  // SVG percent-sizing breaks when the parent has no defined dimensions, so
+  // we measure the stage and set the wrapper size explicitly.
+  const [stageSize, setStageSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node) return;
+    const update = () => setStageSize({ w: node.clientWidth, h: node.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+
+  const STAGE_PADDING = 16;
+  const canvasAspect = params.width / params.height || 1;
+  const availW = Math.max(0, stageSize.w - STAGE_PADDING);
+  const availH = Math.max(0, stageSize.h - STAGE_PADDING);
+  let fitW = availW;
+  let fitH = availW / canvasAspect;
+  if (fitH > availH) {
+    fitH = availH;
+    fitW = availH * canvasAspect;
+  }
+
   const applyZoom = useCallback((targetZ, cursorPos) => {
     const oldZ = zoomRef.current;
     const newZ = Math.max(0.2, Math.min(8, targetZ));
@@ -681,7 +706,11 @@ export default function App() {
         <div
           className="stage-inner"
           ref={svgWrapRef}
-          style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+          style={{
+            width: fitW,
+            height: fitH,
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          }}
         >
           <Dial params={params} />
         </div>
