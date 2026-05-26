@@ -17,6 +17,7 @@ const DEFAULTS = {
   minorLen: 9,
   majorWeight: 2,
   minorWeight: 1,
+  tickCornerRadius: 0,      // 0 = square corners, 100 = fully rounded pill
   showNumbers: true,
   numberSize: 18,
   numberOffset: 8,
@@ -105,6 +106,7 @@ function sanitizeParams(p) {
   clampN('minorLen', 1, 40);
   clampN('majorWeight', 0.5, 8);
   clampN('minorWeight', 0.25, 5);
+  clampN('tickCornerRadius', 0, 100);
   clampN('numberSize', 6, 48);
   clampN('numberOffset', 0, 40);
   clampN('numberWeight', 100, 900, true);
@@ -414,6 +416,7 @@ const HASH_KEYS = {
   minorLen: 'nl',
   majorWeight: 'mw',
   minorWeight: 'nw',
+  tickCornerRadius: 'tcr',
   showNumbers: 'sn',
   numberSize: 'ns',
   numberOffset: 'no',
@@ -886,6 +889,7 @@ export default function App() {
           <Slider label="Minor length" value={p.minorLen} min={1} max={40} step={1} onChange={(v) => set('minorLen', v)} suffix="px" />
           <Slider label="Major weight" value={p.majorWeight} min={0.5} max={8} step={0.5} onChange={(v) => set('majorWeight', v)} suffix="px" />
           <Slider label="Minor weight" value={p.minorWeight} min={0.25} max={5} step={0.25} onChange={(v) => set('minorWeight', v)} suffix="px" />
+          <Slider label="Corner radius" value={p.tickCornerRadius} min={0} max={100} step={1} onChange={(v) => set('tickCornerRadius', v)} suffix="%" />
         </Sec>
 
         <Sec id="rim" title="Rim">

@@ -26,6 +26,45 @@ function tickLabelFor(p) {
 // browser. Picked well above any realistic dial; pathological values bail.
 const MAX_TICKS = 5000;
 
+// Renders a tick. When cornerPct is 0 we emit a <line> (same as before, so
+// the default look is byte-identical). When > 0 we emit a rotated <rect>
+// with an `rx` derived from `cornerPct / 100 * (weight / 2)`. The endpoints
+// stay where the line endpoints were, so spacing and length are unaffected.
+function renderTick({ x1, y1, x2, y2, weight, color, cornerPct, keyId }) {
+  if (!cornerPct || cornerPct <= 0) {
+    return (
+      <line
+        key={keyId}
+        x1={x1} y1={y1}
+        x2={x2} y2={y2}
+        stroke={color}
+        strokeWidth={weight}
+        strokeLinecap="butt"
+      />
+    );
+  }
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  const cx = (x1 + x2) / 2;
+  const cy = (y1 + y2) / 2;
+  const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const rx = Math.min(weight / 2, (cornerPct / 100) * (weight / 2));
+  return (
+    <rect
+      key={keyId}
+      x={cx - len / 2}
+      y={cy - weight / 2}
+      width={len}
+      height={weight}
+      rx={rx}
+      ry={rx}
+      fill={color}
+      transform={`rotate(${angle} ${cx} ${cy})`}
+    />
+  );
+}
+
 export function buildTickValues(min, max, step) {
   const ticks = [];
   if (!Number.isFinite(min) || !Number.isFinite(max) || !Number.isFinite(step)) return ticks;
@@ -54,6 +93,7 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
     tickSide,
     orientation,
     reverse,
+    tickCornerRadius,
   } = p;
 
   // Layout pad is a small fixed margin so the axis stays put no matter what
@@ -88,19 +128,25 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
 
   const tickLine = (v, len, weight, key) => {
     const a = valueToPos(v);
+    // With sides='both' AND rounded corners, draw one tick crossing the axis
+    // instead of two halves so the middle doesn't pinch.
+    if (tickCornerRadius > 0 && tickSide === 'both') {
+      const offPos = perp(len, 1);
+      const offNeg = perp(len, -1);
+      return renderTick({
+        x1: a.x + offNeg.dx, y1: a.y + offNeg.dy,
+        x2: a.x + offPos.dx, y2: a.y + offPos.dy,
+        weight, color: tickColor, cornerPct: tickCornerRadius, keyId: key,
+      });
+    }
     return sides.map((s) => {
       const off = perp(len, s);
       const back = perp(rimExt, -s);
-      return (
-        <line
-          key={`${key}-${s}`}
-          x1={a.x + back.dx} y1={a.y + back.dy}
-          x2={a.x + off.dx} y2={a.y + off.dy}
-          stroke={tickColor}
-          strokeWidth={weight}
-          strokeLinecap="butt"
-        />
-      );
+      return renderTick({
+        x1: a.x + back.dx, y1: a.y + back.dy,
+        x2: a.x + off.dx, y2: a.y + off.dy,
+        weight, color: tickColor, cornerPct: tickCornerRadius, keyId: `${key}-${s}`,
+      });
     });
   };
 
@@ -236,6 +282,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     reverse,
     centerText, centerTextSize, centerTextWeight, centerTextOffset,
     centerDot, centerDotSize,
+    tickCornerRadius,
   } = p;
 
   const labelFor = tickLabelFor(p);
@@ -260,16 +307,11 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     const outer = tickDirection === 'inward' ? r + rimExt : r + len;
     const p1 = polar(a, inner);
     const p2 = polar(a, outer);
-    return (
-      <line
-        key={key}
-        x1={p1.x} y1={p1.y}
-        x2={p2.x} y2={p2.y}
-        stroke={tickColor}
-        strokeWidth={weight}
-        strokeLinecap="butt"
-      />
-    );
+    return renderTick({
+      x1: p1.x, y1: p1.y,
+      x2: p2.x, y2: p2.y,
+      weight, color: tickColor, cornerPct: tickCornerRadius, keyId: key,
+    });
   };
 
   let rimEl = null;
