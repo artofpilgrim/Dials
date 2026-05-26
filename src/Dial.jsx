@@ -202,6 +202,11 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
 
   return (
     <g>
+      {/* Ticks first so the rim draws on top of any back-extension that
+          would otherwise protrude past the rim's far edge. */}
+      {ticksMinor.map((v, i) => tickLine(v, minorLen, minorWeight, `mi-${i}`))}
+      {ticksMajor.map((v, i) => tickLine(v, majorLen, majorWeight, `mj-${i}`))}
+
       {rim && (
         <line
           x1={axisX0} y1={axisY0}
@@ -211,9 +216,6 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
           strokeLinecap="butt"
         />
       )}
-
-      {ticksMinor.map((v, i) => tickLine(v, minorLen, minorWeight, `mi-${i}`))}
-      {ticksMajor.map((v, i) => tickLine(v, majorLen, majorWeight, `mj-${i}`))}
 
       {showNumbers && ticksMajor.map((v, i) => {
         const a = valueToPos(v);
@@ -411,9 +413,11 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
 
   return (
     <g>
-      {rimEl}
+      {/* Ticks first so the rim draws on top of any back-extension that
+          would otherwise protrude past the rim's far edge. */}
       {ticksMinor.map((v, i) => tickAt(v, minorLen, minorWeight, `mi-${i}`))}
       {ticksMajor.map((v, i) => tickAt(v, majorLen, majorWeight, `mj-${i}`))}
+      {rimEl}
       {showNumbers && ticksMajor.map((v, i) => {
         const a = valueToAngle(v);
         let rText;
