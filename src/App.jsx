@@ -126,9 +126,18 @@ function NumField({ label, value, step = 1, onChange }) {
     }
   };
   const handleBlur = () => {
-    const n = Number(draft);
-    if (!Number.isFinite(n) || draft.trim() === '') {
+    const trimmed = draft.trim();
+    const n = Number(trimmed);
+    if (trimmed === '' || !Number.isFinite(n)) {
       setDraft(String(value)); // revert
+      return;
+    }
+    // Normalize the draft to its canonical numeric form (e.g. "3." -> "3")
+    // and commit if it differs from the last value we sent.
+    setDraft(String(n));
+    if (n !== value) {
+      lastSentRef.current = n;
+      onChange(n);
     }
   };
 
