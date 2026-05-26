@@ -321,33 +321,110 @@ const ShapeIcon = {
 };
 
 // ---- URL state helpers ----
-// We round-trip the full `p` object through base64 in location.hash so a link
-// reproduces the exact dial config.
-function decodeHashState(hash) {
+// We round-trip only the fields that differ from DEFAULTS, using short keys,
+// so the hash stays as short as possible. Old base64-JSON URLs still decode
+// via the fallback below.
+const HASH_KEYS = {
+  shape: 's',
+  width: 'w',
+  height: 'h',
+  min: 'mn',
+  max: 'mx',
+  majorStep: 'ms',
+  subdivisions: 'sd',
+  reverse: 'rv',
+  rim: 'r',
+  rimThickness: 'rt',
+  majorLen: 'ml',
+  minorLen: 'nl',
+  majorWeight: 'mw',
+  minorWeight: 'nw',
+  showNumbers: 'sn',
+  numberSize: 'ns',
+  numberOffset: 'no',
+  numberWeight: 'nwt',
+  numberSuffix: 'sf',
+  customLabels: 'cl',
+  centerText: 'ct',
+  centerTextSize: 'cts',
+  centerTextWeight: 'ctw',
+  centerTextOffset: 'cto',
+  centerDot: 'cd',
+  centerDotSize: 'cds',
+  tickColor: 'tc',
+  bg: 'bg',
+  startAngle: 'sa',
+  sweepAngle: 'sw',
+  tickDirection: 'td',
+  numberPlacement: 'np',
+  invert: 'iv',
+  orientation: 'or',
+  tickSide: 'ts',
+};
+const HASH_KEYS_INV = Object.fromEntries(
+  Object.entries(HASH_KEYS).map(([k, v]) => [v, k]),
+);
+
+function encodeHashState(p, defaults) {
+  const usp = new URLSearchParams();
+  for (const [fullKey, shortKey] of Object.entries(HASH_KEYS)) {
+    const v = p[fullKey];
+    if (v === defaults[fullKey]) continue;
+    if (typeof v === 'boolean') usp.set(shortKey, v ? '1' : '0');
+    else usp.set(shortKey, String(v));
+  }
+  return usp.toString();
+}
+
+function decodeHashState(hash, defaults) {
   if (!hash) return null;
+
+  // New short-key format: parse `s=arc&sa=135&...` into a diff object.
+  try {
+    const usp = new URLSearchParams(hash);
+    const result = {};
+    for (const [shortKey, value] of usp.entries()) {
+      const fullKey = HASH_KEYS_INV[shortKey];
+      if (!fullKey) continue;
+      const defaultVal = defaults[fullKey];
+      if (typeof defaultVal === 'boolean') {
+        result[fullKey] = value === '1';
+      } else if (typeof defaultVal === 'number') {
+        const n = Number(value);
+        if (Number.isFinite(n)) result[fullKey] = n;
+      } else {
+        result[fullKey] = value;
+      }
+    }
+    if (Object.keys(result).length > 0) return result;
+  } catch { /* fall through */ }
+
+  // Legacy base64-encoded JSON format. Keeps older shared links working.
   try {
     return JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(hash)))));
   } catch {
     return null;
   }
 }
-function encodeHashState(obj) {
-  return encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(obj)))));
-}
 
 export default function App() {
   const [p, setP] = useState(() => {
-    const fromHash = decodeHashState(window.location.hash.slice(1));
+    const fromHash = decodeHashState(window.location.hash.slice(1), DEFAULTS);
     return fromHash ? { ...DEFAULTS, ...fromHash } : DEFAULTS;
   });
   const svgWrapRef = useRef(null);
 
-  // Write p back into the URL hash (debounced) so sharing the URL shares the
-  // config. replaceState avoids spamming browser history.
+  // Write the diff back into the URL hash (debounced). If nothing differs
+  // from defaults we drop the hash entirely so the URL stays clean.
   useEffect(() => {
     const t = setTimeout(() => {
       try {
-        window.history.replaceState(null, '', '#' + encodeHashState(p));
+        const encoded = encodeHashState(p, DEFAULTS);
+        if (encoded) {
+          window.history.replaceState(null, '', '#' + encoded);
+        } else if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
       } catch { /* ignore */ }
     }, 250);
     return () => clearTimeout(t);
@@ -356,7 +433,7 @@ export default function App() {
   // React to the URL hash changing externally (paste, back/forward).
   useEffect(() => {
     const onHashChange = () => {
-      const next = decodeHashState(window.location.hash.slice(1));
+      const next = decodeHashState(window.location.hash.slice(1), DEFAULTS);
       if (next) setP({ ...DEFAULTS, ...next });
     };
     window.addEventListener('hashchange', onHashChange);
