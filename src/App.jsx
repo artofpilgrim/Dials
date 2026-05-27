@@ -175,7 +175,7 @@ async function outlineTextInSvg(svgEl, family) {
 
 // Preset shape configs
 const SHAPE_PRESETS = {
-  straight: { shape: 'straight', width: 800, height: 220 },
+  straight: { shape: 'straight', width: 800, height: 220, orientation: 'horizontal' },
   semi:     { shape: 'semi', width: 600, height: 380, startAngle: 180, sweepAngle: 180 },
   quarter:  { shape: 'arc', width: 480, height: 480, startAngle: 180, sweepAngle: 90 },
   arc270:   { shape: 'arc', width: 560, height: 560, startAngle: 135, sweepAngle: 270 },
@@ -1160,9 +1160,16 @@ export default function App() {
                   options={[{ value: 'horizontal', label: 'Horiz.' }, { value: 'vertical', label: 'Vert.' }]}
                   value={p.orientation}
                   onChange={(v) => {
-                    if (v === p.orientation) return;
-                    // Swap canvas dimensions so the dial fits the new orientation
-                    setMany({ orientation: v, width: p.height, height: p.width });
+                    // Self-correcting: place the longer dimension on the active
+                    // axis. Means clicking the active button while the canvas
+                    // is mismatched snaps it back into shape, instead of just
+                    // doing nothing.
+                    const longer = Math.max(p.width, p.height);
+                    const shorter = Math.min(p.width, p.height);
+                    const newWidth = v === 'horizontal' ? longer : shorter;
+                    const newHeight = v === 'horizontal' ? shorter : longer;
+                    if (v === p.orientation && newWidth === p.width && newHeight === p.height) return;
+                    setMany({ orientation: v, width: newWidth, height: newHeight });
                   }}
                 />
               </div>
