@@ -323,7 +323,7 @@ function ArcDial({ p, ticksMajor, ticksMinor }) {
   // Outside-label radial extent past the rim: tick (if outward) + offset +
   // gap between label center and rim + the larger of the label's half-extents
   // (worst case: a wide label sitting at the cardinal axis).
-  const tickOutExt = tickDirection === 'outward' ? majorLen : 0;
+  const tickOutExt = (tickDirection === 'outward' || tickDirection === 'both') ? majorLen : 0;
   const outsideLabelExt = (showNumbers && numberPlacement === 'outside')
     ? tickOutExt + numberOffset + labelHalfHeight + Math.max(labelHalfWidth, labelHalfHeight) + 4
     : 0;
@@ -427,21 +427,23 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
   // close cleanly instead of leaving a corner notch.
   const rimExt = rim ? rimThickness / 2 : 0;
 
+  const goInward = tickDirection === 'inward' || tickDirection === 'both';
+  const goOutward = tickDirection === 'outward' || tickDirection === 'both';
   const tickAt = (v, len, weight, key) => {
     const a = valueToAngle(v);
-    // `len` is the visible length past the rim edge. Tick crosses through
-    // the rim and extends `len` on the chosen side.
-    const inner = tickDirection === 'inward' ? r - rimExt - len : r - rimExt;
-    const outer = tickDirection === 'inward' ? r + rimExt : r + rimExt + len;
+    // `len` is the visible length past the rim edge. For 'both', the tick
+    // spans both sides; otherwise only the chosen side, with a small back-
+    // extension into the rim band so the tick meets the rim cleanly.
+    const inner = goInward ? r - rimExt - len : r - rimExt;
+    const outer = goOutward ? r + rimExt + len : r + rimExt;
     const p1 = polar(a, inner);
     const p2 = polar(a, outer);
-    // For inward ticks p2 sits at the rim (inner tip = p1, away from rim).
-    // For outward ticks p1 sits at the rim (outer tip = p2, away from rim).
-    // The rim-side end gets the flat short edge so a thin rim doesn't show
-    // a gap. `tickRoundBoth` overrides to pill-style.
-    const flatSide = tickRoundBoth
-      ? 'none'
-      : (tickDirection === 'inward' ? 'p2' : 'p1');
+    // For 'inward', p2 sits at the rim (outer tip); for 'outward', p1 sits
+    // at the rim (inner tip). For 'both', neither end is at the rim — both
+    // are tips, so round both. `tickRoundBoth` overrides single-side ticks.
+    let flatSide;
+    if (tickDirection === 'both' || tickRoundBoth) flatSide = 'none';
+    else flatSide = tickDirection === 'inward' ? 'p2' : 'p1';
     return renderTick({
       x1: p1.x, y1: p1.y,
       x2: p2.x, y2: p2.y,
@@ -523,9 +525,9 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
         // Labels sit `numberOffset` past whichever edge they're outside of:
         // the rim itself, or the tick tip when the tick points the same way.
         if (numberPlacement === 'outside') {
-          rText = r + rimExt + (tickDirection === 'outward' ? majorLen : 0) + numberOffset + numberSize * 0.55;
+          rText = r + rimExt + (goOutward ? majorLen : 0) + numberOffset + numberSize * 0.55;
         } else {
-          rText = r - rimExt - (tickDirection === 'inward' ? majorLen : 0) - numberOffset - numberSize * 0.55;
+          rText = r - rimExt - (goInward ? majorLen : 0) - numberOffset - numberSize * 0.55;
         }
         const pt = polar(a, rText);
         return (

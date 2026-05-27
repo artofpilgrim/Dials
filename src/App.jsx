@@ -250,7 +250,7 @@ function sanitizeParams(p) {
     if (!allowed.includes(out[key])) out[key] = DEFAULTS[key];
   };
   oneOf('shape', ['straight', 'semi', 'arc', 'circle']);
-  oneOf('tickDirection', ['inward', 'outward']);
+  oneOf('tickDirection', ['inward', 'outward', 'both']);
   oneOf('numberPlacement', ['inside', 'outside']);
   oneOf('orientation', ['horizontal', 'vertical']);
   oneOf('tickSide', ['below', 'above', 'both']);
@@ -1204,6 +1204,7 @@ export default function App() {
                   options={[
                     { value: 'inward', label: 'Inward' },
                     { value: 'outward', label: 'Outward' },
+                    { value: 'both', label: 'Both' },
                   ]}
                   value={p.tickDirection}
                   onChange={(v) => set('tickDirection', v)}
