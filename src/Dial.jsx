@@ -423,6 +423,9 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     const bandR = colorBandPosition === 'outer'
       ? r + rimExt + colorBandThickness / 2
       : r - rimExt - colorBandThickness / 2;
+    // Defensive: skip rendering if the inner-band radius collapses past the
+    // dial centre (only reachable if the thickness cap were widened later).
+    if (bandR > 0) {
     // Extend the first and last zones by an angular amount equivalent to
     // majorWeight/2 pixels at the band's radius, so the band's edges fully
     // cover the first/last tick's stroke instead of stopping at the tick
@@ -463,6 +466,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
       );
     }
     if (segs.length > 0) bandEl = <g>{segs}</g>;
+    } // end if (bandR > 0)
   }
 
   let rimEl = null;
