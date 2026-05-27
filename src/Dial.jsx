@@ -309,14 +309,9 @@ function ArcDial({ p, ticksMajor, ticksMinor }) {
     rim, rimThickness,
     majorLen,
     showNumbers, numberSize, numberOffset,
-    startAngle,
-    sweepAngle,
-    tickDirection,
-    numberPlacement,
   } = p;
 
   const cx = width / 2;
-  const isFullCircle = Math.abs(sweepAngle) >= 360 - 0.001;
   const cy = height / 2;
 
   // How far past the rim does the content reach? Used both as canvas headroom
@@ -339,53 +334,12 @@ function ArcDial({ p, ticksMajor, ticksMinor }) {
   let r = Math.min(width, height) / 2 - outerExtra;
   r = Math.max(20, r);
 
-  if (!isFullCircle) {
-    // Center the visible bounding box of the arc.
-    const samples = 64;
-    const xs = [];
-    const ys = [];
-    for (let i = 0; i <= samples; i++) {
-      const a = startAngle + (sweepAngle * i) / samples;
-      const rad = (a * Math.PI) / 180;
-      xs.push(Math.cos(rad) * r);
-      ys.push(Math.sin(rad) * r);
-    }
-    const minX = Math.min(...xs) - outerExtra;
-    const maxX = Math.max(...xs) + outerExtra;
-    const minY = Math.min(...ys) - outerExtra;
-    const maxY = Math.max(...ys) + outerExtra;
-    const bbW = maxX - minX;
-    const bbH = maxY - minY;
-    const sx = (width - 2) / bbW;
-    const sy = (height - 2) / bbH;
-    const scale = Math.min(1, Math.min(sx, sy));
-    if (scale < 1) {
-      r = r * scale;
-      for (let i = 0; i <= samples; i++) {
-        const a = startAngle + (sweepAngle * i) / samples;
-        const rad = (a * Math.PI) / 180;
-        xs[i] = Math.cos(rad) * r;
-        ys[i] = Math.sin(rad) * r;
-      }
-    }
-    const newMinX = Math.min(...xs) - outerExtra;
-    const newMaxX = Math.max(...xs) + outerExtra;
-    const newMinY = Math.min(...ys) - outerExtra;
-    const newMaxY = Math.max(...ys) + outerExtra;
-    const cxBbox = (newMinX + newMaxX) / 2;
-    const cyBbox = (newMinY + newMaxY) / 2;
-    const shiftX = width / 2 - cxBbox;
-    const shiftY = height / 2 - cyBbox;
-    return (
-      <g transform={`translate(${shiftX} ${shiftY})`}>
-        <ArcDialBody
-          p={p} ticksMajor={ticksMajor} ticksMinor={ticksMinor}
-          cx={0} cy={0} r={r}
-        />
-      </g>
-    );
-  }
-
+  // Pivot stays at the canvas centre regardless of startAngle / sweepAngle.
+  // Previously we shifted the dial to centre the visible arc's bbox, which
+  // looked tighter for partial arcs but caused the whole dial to jump around
+  // any time the user nudged the angle sliders. The trade-off now is some
+  // empty canvas space for partial arcs — the user can shrink the canvas in
+  // the Canvas section if they want a tight fit.
   return (
     <ArcDialBody
       p={p} ticksMajor={ticksMajor} ticksMinor={ticksMinor}
