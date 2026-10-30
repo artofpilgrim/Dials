@@ -11,7 +11,7 @@ A small browser tool for generating clean black-and-white (or colour-band-accent
 ### Shape & layout
 - **Shapes** — straight line (horizontal or vertical), semi-circle, custom arc (any start angle + sweep), full circle.
 - **Reverse direction** — flip the value mapping for counter-clockwise reading or max-at-start straight lines.
-- **Pivot is anchored to the canvas centre** for arc / circle so tweaking start / sweep rotates the dial in place instead of shifting the whole composition. Semi-circles anchor at the bottom so the arc fills the canvas upward.
+- **Pivot is anchored to the canvas centre** for arc / circle so tweaking start / sweep rotates the dial in place instead of shifting the whole composition. Semi-circles centre their visible artwork vertically, accounting for ticks, labels, and the centre title or hub.
 - **Self-correcting orientation toggle** on the straight dial — clicking Horiz. / Vert. places the longer canvas dimension on the active axis, so the canvas never ends up squished against the rendering.
 
 ### Range & graduations
@@ -23,11 +23,11 @@ A small browser tool for generating clean black-and-white (or colour-band-accent
 
 ### Rim & colour band
 - **Rim** on/off with adjustable thickness. Tick endpoints extend through the rim so corners close flush instead of leaving a notch; the rim draws **after** the ticks so back-extensions stay hidden behind it.
-- **Colour band** (zone indicator) — up to 6 user-defined colour zones with a `{ color, endValue }` data model. Inner / outer position relative to the rim, adjustable thickness, configurable **start / end value range** (defaults to full dial range), and a stacked preview bar that updates live as you edit. Four built-in presets (Traffic light, Warning, Cool, Mono) re-scale to your current range on insert.
+- **Colour band** (zone indicator) — up to 6 user-defined colour zones with a `{ color, endValue }` data model. Inner / outer position relative to the rim, adjustable thickness, configurable **start / end value range** (defaults to full dial range), and a stacked preview bar that updates live as you edit. Changing the dial range preserves the proportions of the zones and band bounds. Four built-in presets (Traffic light, Warning, Cool, Mono) re-scale to your current range on insert.
 
 ### Numbers & typography
 - Toggle, size, offset, weight (100–900), unit suffix (e.g. `°`, `%`, `mph`), and per-tick custom labels (`L, M, H` …) that override the numeric value at any index.
-- **Typography section** — font picker with Helvetica plus four curated Google Fonts (Inter, IBM Plex Mono, JetBrains Mono, Space Mono). Fonts are loaded on demand via a `<link>` injected into `<head>`. The chosen family applies to tick numbers, custom labels, and the centre title text.
+- **Typography section** — font picker with Helvetica plus bundled Inter, IBM Plex Mono, JetBrains Mono and Space Mono. The selected family is loaded on demand from this site and applies to tick numbers, custom labels, and the centre title text. Font licenses and pinned upstream sources are in `public/fonts/`.
 - For arc dials: **Tick direction** (inward / outward / both) and **Number placement** (inside / outside) are decoupled from layout — flipping either is purely cosmetic, the rim radius doesn't shift.
 
 ### Center (arc / semi / circle)
@@ -44,7 +44,7 @@ A small browser tool for generating clean black-and-white (or colour-band-accent
 
 ### Presets
 - Save the current configuration to `localStorage` and reload it later.
-- Older presets auto-migrate as the schema evolves (`minorStep` → `subdivisions`, etc.).
+- Older presets and legacy share links auto-migrate as the schema evolves (`minorStep` → `subdivisions`, etc.). Open tabs receive preset changes through browser storage events.
 
 ### Shareable links
 - Every config change is encoded into the URL `#hash`; sharing the URL reproduces the exact dial.
@@ -59,25 +59,28 @@ A small browser tool for generating clean black-and-white (or colour-band-accent
 
 <img src="docs/screenshots/export-panel.png" alt="Export controls panel" width="380" align="right" />
 
-- **Download SVG** — vector, editable in any vector tool.
-- **Download PNG** at **1× / 2× / 3× / 4×** the canvas resolution.
+- **Download SVG** — vector, editable in any vector tool. Bundled fonts are embedded when text is kept editable; vector tools with limited embedded-font support can use outlined exports instead.
+- **Download PNG** at **1× / 2× / 3× / 4×** the canvas resolution, using the same embedded fonts as the preview. A 16-megapixel limit is checked before allocating the canvas; reduce scale or dimensions if the requested image exceeds it.
 - **Transparent PNG** toggle forces an alpha-channel PNG regardless of the dial's background colour — useful for compositing into Painter / Figma.
-- **Outline text on export** — replaces every `<text>` element with a vector `<path>` (via opentype.js) so the receiver of the file doesn't need the font installed. opentype.js and the TTF are lazy-loaded only when the user actually exports with outlining on, so the main bundle stays small.
+- **Outline text on export** — replaces text with vector paths using Fontkit, preserving supported font weights and glyph shaping. Fontkit is loaded only when outlining is requested. Helvetica is a system font with no bundled outline file; choose one of the four bundled fonts to outline text. Export failures appear in a reserved status area instead of silently returning unoutlined text.
 - **Copy SVG to clipboard** — paste straight into Figma / Illustrator without round-tripping through the filesystem.
 
 <br clear="all" />
 
 ### Sidebar UX
 - **Collapsible sections** — click a heading to fold it; open/closed state persists per section in `localStorage`.
-- **Editable slider values** — every slider has an inline numeric input next to its label. Values are clamped to the slider's range on commit; intermediate keystrokes don't poison the renderer.
+- **Editable numeric values** — slider values, canvas dimensions and colour-zone stops preserve partially typed input. Invalid intermediate values are not committed; blur or Enter applies bounds. Inputs have accessible names and selected buttons expose their state to assistive technology.
 
 ## Local development
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm run dev      # http://127.0.0.1:5186/Dials/
 npm run build    # produces dist/
 npm run preview  # serves dist/ for sanity checking the build
+npm test         # state, tick generation, formatting and export-limit regressions
+npx playwright install chromium
+npm run test:browser # builds, then tests the production app in Chromium
 ```
 
 ## Project structure
@@ -87,10 +90,17 @@ npm run preview  # serves dist/ for sanity checking the build
 ├── index.html              # Vite entry; lean shell + <noscript> fallback
 ├── src/
 │   ├── main.jsx            # ReactDOM root
-│   ├── App.jsx             # State, controls, presets, zoom, export
+│   ├── App.jsx             # App state, presets, preview interactions and export UI
+│   ├── Controls.jsx        # Accessible controls and numeric draft handling
+│   ├── state.js            # Defaults, validation, migration and URL encoding
+│   ├── ticks.js            # Tick generation and number formatting
+│   ├── fonts.js            # Bundled font metadata and loading
+│   ├── exports.js          # Font embedding, outlining, SVG and PNG export
 │   ├── Dial.jsx            # SVG renderer (straight + arc + circle + colour band)
 │   └── styles.css          # All styles
 ├── vite.config.js          # base: '/Dials/' for the GitHub Pages subpath
+├── public/fonts/           # Bundled fonts, licenses and source manifest
+├── tests/                  # Unit and production-browser regression tests
 ├── .github/workflows/
 │   └── deploy.yml          # Builds with Vite, publishes via actions/deploy-pages
 └── package.json
@@ -98,25 +108,25 @@ npm run preview  # serves dist/ for sanity checking the build
 
 ## Deployment
 
-Every push to `main` triggers a GitHub Action that runs `npm ci && npm run build` and publishes `dist/` via the official `actions/deploy-pages` workflow. Pages is configured with `build_type: workflow` (set once via the GitHub API; not stored in the repo).
+Every push to `main` triggers a GitHub Action that installs dependencies, runs unit tests, builds, and runs Chromium regression tests before publishing `dist/` via the official `actions/deploy-pages` workflow. Pages is configured with `build_type: workflow` (set once via the GitHub API; not stored in the repo).
 
 If you fork this and want to deploy under a different repo name, change the `base` in [vite.config.js](vite.config.js) to match your new subpath (e.g. `/your-repo-name/`).
 
 ## Notes
 
-- Stack: React 18 + Vite. The original prototype loaded React + Babel-standalone from a CDN; the Vite build cut the runtime from ~3 MB to ~60 KB gzipped (plus a separate ~68 KB chunk for opentype.js that only loads when the user enables outline-on-export).
+- Stack: React 18 + Vite 6. The main JavaScript bundle is about 62 KB gzipped. Fontkit is a separate approximately 150 KB gzipped chunk fetched only for outlining; font files load on demand.
 - The renderer is pure SVG — no canvas, no third-party drawing library at runtime.
-- The tick loop is hard-capped at 5000 ticks to keep misconfigured ranges from freezing the UI, and `min`/`max` are coerced to numbers with a fallback span so equal or inverted ranges never produce NaN coordinates.
+- Tick generation is capped at 5000 ticks per set and reports capped configurations in the Graduations panel. Label precision follows the minimum and major step. Range validation rejects overflowing spans and corrects equal or inverted ranges.
 - The preview wrapper is sized via `ResizeObserver` so the canvas always fills the available stage area while preserving its aspect ratio.
 - Persisted storage:
   - `dialMaker.presets.v1` — saved presets (view state — zoom / pan — is intentionally not stored).
   - `dialMaker.section.<id>` — open/closed state per sidebar section.
 - URL hash format: only fields that differ from `DEFAULTS`, written as short-key URL params via `URLSearchParams` (e.g. `#s=arc&sa=135&sw=270`). A default dial has no hash at all. Legacy base64-JSON hashes still decode for backward compatibility with older shared links. The colour-band zones array uses a custom compact `color:value,color:value` encoding rather than nested JSON.
-- Any state loaded from the hash or a preset goes through a sanitizer before reaching the renderer:
+- Live edits, hashes and presets use the same sanitizer before reaching the renderer:
   - **Numbers** are coerced to finite values and clamped to the same range as the matching UI control. Non-finite values fall back to `DEFAULTS`.
   - **Enum fields** (`shape`, `tickDirection`, `numberPlacement`, `orientation`, `tickSide`, `bg`, `fontFamily`, `colorBandPosition`) are checked against an allowlist; unknown values fall back.
   - **`tickColor`** must match `^#[0-9a-f]{6}$`; anything else falls back.
   - **Booleans** accept strict `true` / `false` only. The hash encoding is `1` / `0`; any other value leaves the field unset so `DEFAULTS` wins.
   - **Free-form strings** (`numberSuffix`, `customLabels`, `centerText`) are type-checked and soft-capped at 32 / 1024 / 256 characters so a maliciously long hash can't stall the renderer.
-  - **Colour-band zones** are validated for monotonic stops, valid `#rrggbb` colours, and that the final stop reaches `max`. Zones outside the band's `[start, end]` range are clipped at render time.
+  - **Colour-band zones** are validated for strictly increasing stops, valid `#rrggbb` colours, and that the final stop reaches `max`. Empty zones are discarded. Zones outside the band's `[start, end]` range are clipped at render time.
 </content>

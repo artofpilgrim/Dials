@@ -1,0 +1,66 @@
+{
+  "repository": "https://github.com/google/fonts",
+  "commit": "6157dfaa640ca5738b4d1a7070fe389c3036d7fc",
+  "files": [
+    {
+      "file": "inter/Inter.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf"
+    },
+    {
+      "file": "inter/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/inter/OFL.txt"
+    },
+    {
+      "file": "ibmplexmono/IBMPlexMono-Bold.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/IBMPlexMono-Bold.ttf"
+    },
+    {
+      "file": "ibmplexmono/IBMPlexMono-ExtraLight.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/IBMPlexMono-ExtraLight.ttf"
+    },
+    {
+      "file": "ibmplexmono/IBMPlexMono-Light.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/IBMPlexMono-Light.ttf"
+    },
+    {
+      "file": "ibmplexmono/IBMPlexMono-Medium.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/IBMPlexMono-Medium.ttf"
+    },
+    {
+      "file": "ibmplexmono/IBMPlexMono-Regular.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/IBMPlexMono-Regular.ttf"
+    },
+    {
+      "file": "ibmplexmono/IBMPlexMono-SemiBold.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/IBMPlexMono-SemiBold.ttf"
+    },
+    {
+      "file": "ibmplexmono/IBMPlexMono-Thin.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/IBMPlexMono-Thin.ttf"
+    },
+    {
+      "file": "ibmplexmono/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/ibmplexmono/OFL.txt"
+    },
+    {
+      "file": "jetbrainsmono/JetBrainsMono.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf"
+    },
+    {
+      "file": "jetbrainsmono/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/jetbrainsmono/OFL.txt"
+    },
+    {
+      "file": "spacemono/OFL.txt",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/spacemono/OFL.txt"
+    },
+    {
+      "file": "spacemono/SpaceMono-Bold.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/spacemono/SpaceMono-Bold.ttf"
+    },
+    {
+      "file": "spacemono/SpaceMono-Regular.ttf",
+      "source": "https://raw.githubusercontent.com/google/fonts/6157dfaa640ca5738b4d1a7070fe389c3036d7fc/ofl/spacemono/SpaceMono-Regular.ttf"
+    }
+  ]
+}

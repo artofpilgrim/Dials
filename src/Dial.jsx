@@ -1,24 +1,21 @@
 import React from 'react';
+import { buildTickValues, labelPrecision, fmtNum } from './ticks.js';
+export { buildTickValues } from './ticks.js';
 
 // ============================================================
 // Dial renderer — pure SVG, black & white.
 // Supports: straight, semi-circle, circle, custom arc.
 // ============================================================
 
-function fmtNum(v, digits = 2) {
-  if (Number.isInteger(v)) return String(v);
-  const s = v.toFixed(digits);
-  return s.replace(/\.?0+$/, '');
-}
-
 // Returns a (value, index) => string for the major tick label.
 // Custom labels override the numeric value; an empty entry falls back to numeric.
 function tickLabelFor(p) {
   const labels = (p.customLabels || '').split(',').map((s) => s.trim());
   const suffix = p.numberSuffix || '';
+  const digits = labelPrecision(p.min, p.majorStep);
   return (v, i) => {
     if (i < labels.length && labels[i] !== '') return labels[i];
-    return fmtNum(v) + suffix;
+    return fmtNum(v, digits) + suffix;
   };
 }
 
@@ -35,10 +32,6 @@ function maxLabelChars(p, ticksMajor) {
   }
   return m;
 }
-
-// Hard ceiling on tick count so a misconfigured range/step can't freeze the
-// browser. Picked well above any realistic dial; pathological values bail.
-const MAX_TICKS = 5000;
 
 // Renders a tick. cornerPct === 0 keeps the original <line> (byte-identical
 // output, no path-rounding work). > 0 emits a rotated <path> so we can
@@ -71,11 +64,11 @@ function renderTick({ x1, y1, x2, y2, weight, color, cornerPct, flatSide = 'none
   const cx = (x1 + x2) / 2;
   const cy = (y1 + y2) / 2;
   const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const rx = Math.min(weight / 2, (cornerPct / 100) * (weight / 2));
   const halfLen = len / 2;
   const halfW = weight / 2;
   const roundP1 = flatSide !== 'p1';
   const roundP2 = flatSide !== 'p2';
+  const rx = Math.min(weight / 2, (cornerPct / 100) * (weight / 2), roundP1 && roundP2 ? halfLen : len);
   const hasStraightLong = rx < halfW;
   const f = (n) => n.toFixed(3);
 
@@ -116,24 +109,6 @@ function renderTick({ x1, y1, x2, y2, weight, color, cornerPct, flatSide = 'none
       transform={`translate(${f(cx)} ${f(cy)}) rotate(${f(angle)})`}
     />
   );
-}
-
-export function buildTickValues(min, max, step) {
-  const ticks = [];
-  if (!Number.isFinite(min) || !Number.isFinite(max) || !Number.isFinite(step)) return ticks;
-  if (step <= 0 || max <= min) return ticks;
-  const expected = (max - min) / step;
-  if (expected > MAX_TICKS) return ticks;
-
-  // Loop on the integer index, not by accumulating step into v, so FP drift
-  // doesn't compound and we round relative to min (not against zero).
-  const span = max - min;
-  const eps = step / 1e6;
-  const count = Math.floor(span / step + eps);
-  for (let i = 0; i <= count; i++) {
-    ticks.push(min + i * step);
-  }
-  return ticks;
 }
 
 // ---- Straight dial ----
@@ -311,6 +286,18 @@ function StraightDial({ p, ticksMajor, ticksMinor }) {
 }
 
 // ---- Arc dial (covers semi-circle, circle, custom arc) ----
+function arcLabelRadius(p, r, label, angle) {
+  const radians = angle * Math.PI / 180;
+  const labelExtent = Math.abs(Math.cos(radians)) * label.length * p.numberSize * 0.3
+    + Math.abs(Math.sin(radians)) * p.numberSize * 0.55;
+  const rimExt = p.rim ? p.rimThickness / 2 : 0;
+  const outside = p.numberPlacement === 'outside';
+  const tickOnLabelSide = p.tickDirection === 'both'
+    || p.tickDirection === (outside ? 'outward' : 'inward');
+  const offset = rimExt + (tickOnLabelSide ? p.majorLen : 0) + p.numberOffset + labelExtent;
+  return outside ? r + offset : Math.max(0, r - offset);
+}
+
 function ArcDial({ p, ticksMajor, ticksMinor }) {
   const {
     width, height,
@@ -348,14 +335,40 @@ function ArcDial({ p, ticksMajor, ticksMinor }) {
   // Per-shape anchor adjustments for shapes that only fill part of their
   // bbox, so we don't waste a chunk of canvas. Semi is the obvious case.
   if (p.shape === 'semi') {
-    // Top-half semi (startAngle=180, sweep=180 locked by clean()). Anchor
-    // pivot near the bottom of the canvas so the arc fills upward. r can
-    // grow because we only need `r` of vertical room (not `2r`).
+    // A semi only needs one radius of vertical room. Fit its radius first;
+    // then centre the visible artwork instead of anchoring it to the bottom.
     r = Math.min(width / 2 - outerExtra, height - 2 * outerExtra);
-    pivotY = height - outerExtra;
   }
 
   r = Math.max(20, r);
+
+  if (p.shape === 'semi') {
+    const outward = p.tickDirection === 'outward' || p.tickDirection === 'both';
+    const tickExtent = outward ? Math.max(majorLen, ticksMinor.length ? p.minorLen : 0) : 0;
+    const bandExtent = p.colorBandEnabled && p.colorBandPosition === 'outer' ? p.colorBandThickness : 0;
+    let top = -r - ringExtra - Math.max(tickExtent, bandExtent);
+    let bottom = Math.max(p.majorWeight, ticksMinor.length ? p.minorWeight : 0) / 2;
+
+    if (showNumbers) {
+      const labelFor = tickLabelFor(p);
+      ticksMajor.forEach((v, i) => {
+        const fraction = (v - p.min) / (p.max - p.min);
+        const angle = 180 + (p.reverse ? 1 - fraction : fraction) * 180;
+        const y = Math.sin(angle * Math.PI / 180) * arcLabelRadius(p, r, labelFor(v, i), angle);
+        top = Math.min(top, y - labelHalfHeight);
+        bottom = Math.max(bottom, y + labelHalfHeight);
+      });
+    }
+    if (p.centerDot) {
+      top = Math.min(top, -p.centerDotSize);
+      bottom = Math.max(bottom, p.centerDotSize);
+    }
+    if (p.centerText) {
+      top = Math.min(top, p.centerTextOffset - p.centerTextSize * 0.55);
+      bottom = Math.max(bottom, p.centerTextOffset + p.centerTextSize * 0.55);
+    }
+    pivotY = (height - top - bottom) / 2;
+  }
 
   return (
     <ArcDialBody
@@ -370,10 +383,9 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     min, max,
     rim, rimThickness,
     tickColor, majorLen, minorLen, majorWeight, minorWeight,
-    showNumbers, numberSize, numberOffset, numberWeight,
+    showNumbers, numberSize, numberWeight,
     startAngle, sweepAngle,
     tickDirection,
-    numberPlacement,
     reverse,
     centerText, centerTextSize, centerTextWeight, centerTextOffset,
     centerDot, centerDotSize,
@@ -407,7 +419,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
     // `len` is the visible length past the rim edge. For 'both', the tick
     // spans both sides; otherwise only the chosen side, with a small back-
     // extension into the rim band so the tick meets the rim cleanly.
-    const inner = goInward ? r - rimExt - len : r - rimExt;
+    const inner = Math.max(0, goInward ? r - rimExt - len : r - rimExt);
     const outer = goOutward ? r + rimExt + len : r + rimExt;
     const p1 = polar(a, inner);
     const p2 = polar(a, outer);
@@ -462,6 +474,11 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
       const a0 = valueToAngle(drawStart);
       const a1 = valueToAngle(drawEnd);
       const sweep = a1 - a0;
+      if (Math.abs(sweep) >= 360 - 1e-9) {
+        segs.push(<circle key={`band-${i}`} data-band="" cx={cx} cy={cy} r={bandR}
+          stroke={zone.color} strokeWidth={colorBandThickness} fill="none" />);
+        continue;
+      }
       const p0 = polar(a0, bandR);
       const p1 = polar(a1, bandR);
       const largeArc = Math.abs(sweep) > 180 ? 1 : 0;
@@ -470,6 +487,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
       segs.push(
         <path
           key={`band-${i}`}
+          data-band=""
           d={d}
           stroke={zone.color}
           strokeWidth={colorBandThickness}
@@ -514,14 +532,9 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
       {rimEl}
       {showNumbers && ticksMajor.map((v, i) => {
         const a = valueToAngle(v);
-        let rText;
         // Labels sit `numberOffset` past whichever edge they're outside of:
         // the rim itself, or the tick tip when the tick points the same way.
-        if (numberPlacement === 'outside') {
-          rText = r + rimExt + (goOutward ? majorLen : 0) + numberOffset + numberSize * 0.55;
-        } else {
-          rText = r - rimExt - (goInward ? majorLen : 0) - numberOffset - numberSize * 0.55;
-        }
+        const rText = arcLabelRadius(p, r, labelFor(v, i), a);
         const pt = polar(a, rText);
         return (
           <text
@@ -558,7 +571,7 @@ function ArcDialBody({ p, ticksMajor, ticksMinor, cx, cy, r }) {
   );
 }
 
-export default function Dial({ params }) {
+function Dial({ params }) {
   const p = params;
   const { min, max, majorStep, minorStep } = p;
 
@@ -581,8 +594,11 @@ export default function Dial({ params }) {
     [min, max, minorStep, isFullCircle],
   );
   const ticksMinor = React.useMemo(() => {
-    const eps = Math.min(majorStep, minorStep) / 1e3;
-    return ticksMinorAll.filter((v) => !ticksMajor.some((m) => Math.abs(m - v) < eps));
+    if (!ticksMajor.length) return ticksMinorAll;
+    return ticksMinorAll.filter(v => {
+      const index = (v - min) / majorStep;
+      return Math.abs(index - Math.round(index)) > 1e-7;
+    });
   }, [ticksMinorAll, ticksMajor, majorStep, minorStep]);
 
   const inner = p.shape === 'straight'
@@ -594,13 +610,15 @@ export default function Dial({ params }) {
       xmlns="http://www.w3.org/2000/svg"
       viewBox={`0 0 ${p.width} ${p.height}`}
       preserveAspectRatio="xMidYMid meet"
-      style={{ width: '100%', height: '100%', display: 'block' }}
+      style={{ width: '100%', height: '100%', display: 'block', fontOpticalSizing: 'none', fontSynthesis: 'none' }}
       shapeRendering="geometricPrecision"
     >
       {p.bg !== 'transparent' && (
-        <rect x="0" y="0" width={p.width} height={p.height} fill={p.bg} />
+        <rect data-background="" x="0" y="0" width={p.width} height={p.height} fill={p.bg} />
       )}
       {inner}
     </svg>
   );
 }
+
+export default React.memo(Dial);
